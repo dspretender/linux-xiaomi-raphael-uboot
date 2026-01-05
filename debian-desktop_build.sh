@@ -9,7 +9,7 @@ then
 fi
 
 # 设置 Debian 版本
-DEBIAN_VERSION="trixie"
+DEBIAN_VERSION="bookworm"
 
 # 创建根文件系统镜像
 truncate -s 6G rootfs.img
