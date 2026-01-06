@@ -9,7 +9,7 @@ then
 fi
 
 # 设置 Ubuntu 版本
-UBUNTU_VERSION="plucky"
+UBUNTU_VERSION="questing"
 
 # 创建根文件系统镜像
 truncate -s 6G rootfs.img
@@ -38,10 +38,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 # 配置清华镜像源
 cat > rootdir/etc/apt/sources.list << 'EOF'
-deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ plucky main restricted universe multiverse
-deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ plucky-updates main restricted universe multiverse
-deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ plucky-backports main restricted universe multiverse
-deb http://ports.ubuntu.com/ubuntu-ports/ plucky-security main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ questing main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ questing-updates main restricted universe multiverse
+deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ questing-backports main restricted universe multiverse
+deb http://ports.ubuntu.com/ubuntu-ports/ questing-security main restricted universe multiverse
 EOF
 
 # 更新系统
