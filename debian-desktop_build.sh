@@ -49,21 +49,20 @@ chroot rootdir apt update
 chroot rootdir apt upgrade -y
 
 # 安装基础软件包
-chroot rootdir apt install -y bash-completion sudo apt-utils ssh openssh-server nano systemd-boot initramfs-tools chrony curl wget $1
-
-# 安装语言包和设置默认语言为简体中文
-chroot rootdir apt install -y locales locales-all tzdata
-echo "LANG=zh_CN.UTF-8" | tee rootdir/etc/default/locale
-echo "LANGUAGE=zh_CN:zh" | tee -a rootdir/etc/default/locale
-echo "LC_ALL=zh_CN.UTF-8" | tee -a rootdir/etc/default/locale
-
-# 设置时区为亚洲/上海
-echo "Asia/Shanghai" | tee rootdir/etc/timezone
-chroot rootdir ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-chroot rootdir dpkg-reconfigure --frontend noninteractive tzdata
+chroot rootdir apt install -y bash-completion sudo apt-utils ssh openssh-server nano systemd-boot initramfs-tools chrony curl wget dnsmasq iptables iproute2 $1
 
 # 安装设备特定软件包
 chroot rootdir apt install -y rmtfs protection-domain-mapper tqftpserv
+
+# 安装语言包和设置默认语言为简体中文
+chroot rootdir apt install -y locales locales-all tzdata
+	
+chroot rootdir sed -i 's/^# *zh_CN.UTF-8 UTF-8/zh_CN.UTF-8 UTF-8/' /etc/locale.gen
+chroot rootdir locale-gen zh_CN.UTF-8
+chroot rootdir update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh
+echo "Asia/Shanghai" | tee rootdir/etc/timezone
+chroot rootdir ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+chroot rootdir dpkg-reconfigure -f noninteractive tzdata
 
 # 修改服务配置
 sed -i '/ConditionKernelVersion/d' rootdir/lib/systemd/system/pd-mapper.service
@@ -79,6 +78,64 @@ chroot rootdir update-initramfs -c -k all
 # 启用 Phosh 服务
 chroot rootdir systemctl enable phosh
 
+# 配置 NCM
+cat > rootdir/etc/dnsmasq.d/usb-ncm.conf << 'EOF'
+interface=usb0
+bind-dynamic
+port=0
+dhcp-authoritative
+dhcp-range=172.16.42.2,172.16.42.254,255.255.255.0,1h
+dhcp-option=3,172.16.42.1
+EOF
+echo "net.ipv4.ip_forward=1" | tee rootdir/etc/sysctl.d/99-usb-ncm.conf
+chroot rootdir systemctl enable dnsmasq
+cat > rootdir/usr/local/sbin/setup-usb-ncm.sh << 'EOF'
+#!/bin/sh
+set -e
+modprobe libcomposite
+mountpoint -q /sys/kernel/config || mount -t configfs none /sys/kernel/config
+G=/sys/kernel/config/usb_gadget/g1
+mkdir -p $G
+echo 0x1d6b > $G/idVendor
+echo 0x0104 > $G/idProduct
+echo 0x0200 > $G/bcdUSB
+mkdir -p $G/strings/0x409
+echo xiaomi-raphael > $G/strings/0x409/manufacturer
+echo NCM > $G/strings/0x409/product
+echo $(cat /etc/machine-id) > $G/strings/0x409/serialnumber
+mkdir -p $G/configs/c.1
+mkdir -p $G/configs/c.1/strings/0x409
+echo NCM > $G/configs/c.1/strings/0x409/configuration
+mkdir -p $G/functions/ncm.usb0
+ln -sf $G/functions/ncm.usb0 $G/configs/c.1/
+UDC=$(ls /sys/class/udc | head -n 1)
+echo $UDC > $G/UDC
+ip link set usb0 up
+ip addr add 172.16.42.1/24 dev usb0 || true
+OUT=$(ip route get 1.1.1.1 | awk '{print $5; exit}')
+sysctl -w net.ipv4.ip_forward=1
+iptables -t nat -C POSTROUTING -o $OUT -j MASQUERADE || iptables -t nat -A POSTROUTING -o $OUT -j MASQUERADE
+iptables -C FORWARD -i $OUT -o usb0 -m state --state RELATED,ESTABLISHED -j ACCEPT || iptables -A FORWARD -i $OUT -o usb0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -C FORWARD -i usb0 -o $OUT -j ACCEPT || iptables -A FORWARD -i usb0 -o $OUT -j ACCEPT
+systemctl restart dnsmasq || true
+EOF
+chmod +x rootdir/usr/local/sbin/setup-usb-ncm.sh
+cat > rootdir/etc/systemd/system/usb-ncm.service << 'EOF'
+[Unit]
+Description=USB CDC-NCM gadget setup
+After=network.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/setup-usb-ncm.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+chroot rootdir systemctl enable usb-ncm
+
 # 配置 fstab
 echo "PARTLABEL=userdata / ext4 errors=remount-ro,x-systemd.growfs 0 1
 PARTLABEL=cache /boot vfat umask=0077 0 1" | tee rootdir/etc/fstab
@@ -87,11 +144,6 @@ PARTLABEL=cache /boot vfat umask=0077 0 1" | tee rootdir/etc/fstab
 echo "root:1234" | chroot rootdir chpasswd
 chroot rootdir useradd -m -G sudo -s /bin/bash user
 echo "user:1234" | chroot rootdir chpasswd
-
-# 设置用户中文环境
-echo "export LANG=zh_CN.UTF-8" | tee -a rootdir/home/user/.bashrc
-echo "export LANGUAGE=zh_CN:zh" | tee -a rootdir/home/user/.bashrc
-echo "export LC_ALL=zh_CN.UTF-8" | tee -a rootdir/home/user/.bashrc
 
 # 允许SSH root登录
 echo "PermitRootLogin yes" | tee -a rootdir/etc/ssh/sshd_config

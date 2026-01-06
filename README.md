@@ -6,11 +6,11 @@
 
 本项目包含完整的构建工具链，可用于构建适用于小米 Raphael 设备的 Linux 系统镜像，包括：
 
+- **内核编译工作流** - 自动化编译定制的 Linux 内核
 - **Debian Desktop** - 带 Phosh 桌面环境的 Debian 系统
 - **Debian Server** - 无图形界面的 Debian 服务器系统
 - **Ubuntu Desktop** - 带 Phosh 桌面环境的 Ubuntu 系统
 - **Ubuntu Server** - 无图形界面的 Ubuntu 服务器系统
-- **Linux Kernel** - 专门为 Raphael 设备优化的内核
 
 ## 📋 目前工作
 
@@ -39,11 +39,16 @@
    - 等待构建完成，产物将自动发布到 Releases
 
 3. **构建系统镜像**：
-   - 选择对应的工作流（如 "编译debian-desktop"）
+   - 选择 "构建系统镜像" 工作流
    - 点击 "Run workflow"
-   - 输入参数：
-     - `kernel_version`：上一步构建的内核版本号
-     - `desktop_environment`（仅桌面版）：选择桌面环境
+   - 选择系统类型：
+       - `debian-desktop`：Debian 桌面版
+       - `debian-server`：Debian 服务器版
+       - `ubuntu-desktop`：Ubuntu 桌面版
+       - `ubuntu-server`：Ubuntu 服务器版
+   - 内核版本号：
+       - `上一步构建的内核版本号`
+   - 选择桌面环境（仅桌面版）：
        - `phosh-core`：基础 Phosh 环境
        - `phosh-full`：完整的 Phosh 环境
        - `phosh-phone`：手机优化的 Phosh 环境
@@ -52,8 +57,10 @@
 ## 📦 镜像特性
 
 ### 通用特性
+- ✅ 清华大学软件源
 - ✅ 简体中文语言环境
-- ✅ 亚洲/上海时区
+- ✅ 中国标准时区
+- ✅ 支持NCM（usb连接电脑，ssh示例：`ssh user@172.16.42.1`）
 - ✅ 预装 SSH 服务器
 - ✅ 允许 root SSH 登录
 - ✅ 包含必要的设备驱动和固件
@@ -65,7 +72,7 @@
 
 ### 服务器版额外特性
 - ✅ 网络管理器
-- ✅ 命令行输入 leijun 关闭屏幕 jinfan 打开屏幕
+- ✅ 命令行输入 `leijun` 关闭屏幕，`jinfan` 打开屏幕
 
 ## 🔧 安装到设备
 
@@ -92,6 +99,15 @@ fastboot erase dtbo
 # 5. 重启设备
 fastboot reboot
 ```
+
+## ❓ 常见问题解答 (FAQ)
+
+- [解决Windows下无法连接使用CDC NCM驱动](https://www.bilibili.com/video/BV1tW4y1A79V/)
+
+- server版怎么连接网络？？？
+	- 1.OTG连接网线系统会自动识别
+	- 2.OTG连接键盘输入 `nmtui` 连接wifi
+	- 3.usb连接电脑安装好NCM驱动后输入 `nmtui` 连接wifi
 
 ## 🙏 致谢
 
