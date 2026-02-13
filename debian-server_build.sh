@@ -31,9 +31,9 @@ mount --bind /sys rootdir/sys
 
 # 配置网络和主机名
 echo "nameserver 1.1.1.1" | tee rootdir/etc/resolv.conf
-echo "xiaomi-raphael" | tee rootdir/etc/hostname
+echo "raphael" | tee rootdir/etc/hostname
 echo "127.0.0.1 localhost
-127.0.1.1 xiaomi-raphael" | tee rootdir/etc/hosts
+127.0.1.1 raphael" | tee rootdir/etc/hosts
 
 # Chroot 安装步骤
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:\$PATH
@@ -181,25 +181,6 @@ jinfan() {
     echo "屏幕已开启"
 }
 EOF
-
-# 配置开机 15 秒后自动熄屏的 Systemd 服务
-cat > rootdir/etc/systemd/system/blank_screen.service << 'EOF'
-[Unit]
-Description=Auto-blank screen after 15s
-After=multi-user.target
-
-[Service]
-Type=simple
-ExecStartPre=/bin/bash -c "/usr/bin/sleep 15"
-ExecStart=sh -c 'TERM=linux setterm --blank force </dev/tty1'
-User=root
-Restart=on-failure
-RestartSec=5s
-
-[Install]
-WantedBy=multi-user.target
-EOF
-chroot rootdir systemctl enable blank_screen.service
 
 # 清理 apt 缓存
 chroot rootdir apt clean
