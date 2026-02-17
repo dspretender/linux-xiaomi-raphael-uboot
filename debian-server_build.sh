@@ -12,7 +12,7 @@ fi
 DEBIAN_VERSION="bookworm"
 
 # 创建根文件系统镜像
-truncate -s 3G rootfs.img
+truncate -s 6G rootfs.img
 mkfs.ext4 rootfs.img
 mkdir rootdir
 mount -o loop rootfs.img rootdir
